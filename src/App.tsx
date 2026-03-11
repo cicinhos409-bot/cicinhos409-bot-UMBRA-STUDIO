@@ -25,6 +25,7 @@ import VideoCreator from './components/VideoCreator';
 import PlansView from './components/PlansView';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
+import BackupManager from './components/BackupManager';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button
@@ -87,6 +88,31 @@ export default function App() {
     const res = await fetch('/api/projects');
     const data = await res.json();
     setProjects(data);
+  };
+
+  const handleImportProjects = async (importedProjects: Project[]) => {
+    try {
+      // Importa cada projeto para o banco de dados
+      for (const project of importedProjects) {
+        await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: project.id || Math.random().toString(36).substring(7),
+            name: project.name,
+            script: project.script,
+            style: project.style,
+            aspect_ratio: project.aspect_ratio
+          })
+        });
+      }
+      
+      // Recarrega projetos
+      fetchProjects();
+      alert(`✅ ${importedProjects.length} projeto(s) importado(s) com sucesso!`);
+    } catch (error) {
+      alert(`❌ Erro ao importar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    }
   };
 
   const resetForm = () => {
@@ -295,13 +321,16 @@ export default function App() {
                   <h2 className="text-3xl font-bold mb-2">Bem-vindo, Criador</h2>
                   <p className="text-umbra-muted">Seus projetos recentes e ferramentas de criação.</p>
                 </div>
-                <button 
-                  onClick={() => setIsCreating(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-umbra-accent rounded-xl font-bold purple-glow hover:bg-umbra-accent-hover transition-all"
-                >
-                  <Plus size={20} />
-                  Novo Projeto
-                </button>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setIsCreating(true)}
+                    className="flex items-center gap-2 px-6 py-3 bg-umbra-accent rounded-xl font-bold purple-glow hover:bg-umbra-accent-hover transition-all"
+                  >
+                    <Plus size={20} />
+                    Novo Projeto
+                  </button>
+                  <BackupManager projects={projects} onImport={handleImportProjects} onExport={() => {}} />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
