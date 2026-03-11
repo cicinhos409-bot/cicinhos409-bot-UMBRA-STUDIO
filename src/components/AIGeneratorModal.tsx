@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Loader, Send, Image as ImageIcon } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Loader, Send, Image as ImageIcon, Save, Trash2 } from "lucide-react";
 
 type AIProvider = "groq" | "google" | "openrouter" | "ollama" | "deapi" | "puter" | "pollinations";
 
@@ -13,10 +13,47 @@ const AIGeneratorModal: React.FC<{
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"text" | "image">("text");
   const [result, setResult] = useState("");
+  const [savedKeys, setSavedKeys] = useState<Record<string, string>>({});
+
+  // Carrega chaves salvas do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("ai_api_keys");
+    if (saved) {
+      setSavedKeys(JSON.parse(saved));
+      const key = JSON.parse(saved)[provider];
+      if (key) setApiKey(key);
+    }
+  }, [provider]);
+
+  // Salva chave no localStorage
+  const saveKey = () => {
+    if (!apiKey.trim()) {
+      alert("Insira uma chave válida");
+      return;
+    }
+    const updated = { ...savedKeys, [provider]: apiKey };
+    setSavedKeys(updated);
+    localStorage.setItem("ai_api_keys", JSON.stringify(updated));
+    alert(`Chave salva para ${provider}!`);
+  };
+
+  // Remove chave salva
+  const deleteKey = () => {
+    const updated = { ...savedKeys };
+    delete updated[provider];
+    setSavedKeys(updated);
+    localStorage.setItem("ai_api_keys", JSON.stringify(updated));
+    setApiKey("");
+  };
 
   const generateContent = async () => {
     if (!prompt.trim()) {
       alert("Por favor, insira um prompt");
+      return;
+    }
+
+    if (mode === "text" && provider !== "ollama" && provider !== "deapi" && !apiKey.trim()) {
+      alert(`Por favor, insira uma chave de API para ${provider}`);
       return;
     }
 
@@ -35,6 +72,11 @@ const AIGeneratorModal: React.FC<{
 
       const data = await response.json();
 
+      if (!response.ok) {
+        alert(`Erro: ${data.error}`);
+        return;
+      }
+
       if (mode === "text") {
         setResult(data.result);
         onGenerate(data.result);
@@ -49,12 +91,15 @@ const AIGeneratorModal: React.FC<{
     }
   };
 
+  const providerEndsWithFreeKeys = provider === "ollama" || provider === "deapi" || provider === "pollinations";
+  const hasSavedKey = savedKeys[provider];
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Adicionar Conteúdo com IA</h2>
-          <p className="text-gray-600 mt-1">Escolha um provedor de IA para gerar conteúdo</p>
+          <p className="text-gray-600 mt-1">Use sua própria chave de API para gerar conteúdo</p>
         </div>
 
         <div className="p-6 space-y-6">
@@ -98,27 +143,66 @@ const AIGeneratorModal: React.FC<{
                 <option value="groq">🚀 Groq (Rápido, Grátis)</option>
                 <option value="google">🔍 Google AI (Gemini)</option>
                 <option value="openrouter">🎛️ OpenRouter (Multi-modelo)</option>
-                <option value="ollama">💻 Ollama (Local)</option>
-                <option value="deapi">🌐 DeAPI</option>
+                <option value="ollama">💻 Ollama (Local - Grátis)</option>
+                <option value="deapi">🌐 DeAPI (Grátis)</option>
                 <option value="puter">☁️ Puter</option>
               </select>
             </div>
           )}
 
           {/* API Key */}
-          {mode === "text" && provider !== "ollama" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Insira sua chave de API para ${provider}`}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Sua chave não será salva, apenas usada para esta geração
+          {mode === "text" && !providerEndsWithFreeKeys && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-900 mb-2">Chave de API</label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={`Cole sua chave de API para ${provider}...`}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={saveKey}
+                  title="Salvar chave no navegador (localStorage)"
+                  className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                >
+                  <Save size={18} />
+                </button>
+                {hasSavedKey && (
+                  <button
+                    onClick={deleteKey}
+                    title="Deletar chave salva"
+                    className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                {hasSavedKey ? "✅ Chave salva localmente" : "Chave não será salva - insira a cada uso"}
               </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Obtenha a chave em:<br/>
+                {provider === "groq" && "https://console.groq.com/keys"}
+                {provider === "google" && "https://ai.google.dev/"}
+                {provider === "openrouter" && "https://openrouter.ai"}
+                {provider === "puter" && "https://puter.com"}
+              </p>
+            </div>
+          )}
+
+          {/* Mensagem APIs Grátis */}
+          {mode === "text" && providerEndsWithFreeKeys && (
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ <strong>{provider === "ollama" ? "Ollama" : provider === "deapi" ? "DeAPI" : "Pollinations"}</strong> é grátis!
+              </p>
+              {provider === "ollama" && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Certifique-se que Ollama está rodando localmente em http://localhost:11434
+                </p>
+              )}
             </div>
           )}
 
@@ -144,7 +228,7 @@ const AIGeneratorModal: React.FC<{
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm font-medium text-gray-700 mb-2">Resultado:</p>
               {mode === "text" ? (
-                <p className="text-gray-700 text-sm">{result}</p>
+                <p className="text-gray-700 text-sm whitespace-pre-wrap">{result}</p>
               ) : (
                 <img src={result} alt="Generated" className="max-w-full rounded-lg" />
               )}
