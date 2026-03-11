@@ -129,6 +129,37 @@ async function startServer() {
     }
   });
 
+  // AI API Routes
+  app.post("/api/ai/generate", async (req, res) => {
+    try {
+      const { prompt, provider, apiKey, model } = req.body;
+      
+      // Importa dinamicamente o serviço de IA
+      const { default: AIService } = await import("./src/lib/ai/index.js");
+      
+      const aiService = new AIService({
+        provider,
+        apiKey: apiKey || process.env[`${provider.toUpperCase()}_API_KEY`],
+        model,
+      });
+
+      const result = await aiService.generateText(prompt);
+      res.json({ success: true, result });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/ai/image", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+      res.json({ success: true, imageUrl });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  });
+
   // Vite Integration
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
