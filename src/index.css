@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-umbra-bg: #0a0a0a;
+  --color-umbra-card: #151515;
+  --color-umbra-accent: #8b5cf6;
+  --color-umbra-accent-hover: #7c3aed;
+  --color-umbra-text: #f5f5f5;
+  --color-umbra-muted: #a0a0a0;
+  --color-umbra-border: #262626;
+  
+  --font-syne: "Syne", sans-serif;
+  --font-dm: "DM Sans", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-umbra-bg text-umbra-text antialiased;
+  }
+}
+
+.glass {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10;
+}
+
+.purple-glow {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
