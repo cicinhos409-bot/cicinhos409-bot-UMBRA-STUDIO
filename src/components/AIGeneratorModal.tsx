@@ -3,11 +3,22 @@ import { Loader, Send, Image as ImageIcon, Save, Trash2 } from "lucide-react";
 
 type AIProvider = "groq" | "google" | "openrouter" | "ollama" | "deapi" | "puter" | "pollinations";
 
+const AI_MODELS: Record<AIProvider, string[]> = {
+  groq: ["mixtral-8x7b-32768", "llama2-70b", "gemma-7b"],
+  google: ["gemini-fast", "gemini-search"],
+  openrouter: ["auto", "openai", "openai-fast", "claude-fast", "mistral", "deepseek", "perplexity-fast", "nova-fast", "qwen-coder", "glm", "kimi"],
+  ollama: ["llama2", "mistral", "neural-chat", "orca-mini"],
+  deapi: ["gpt-3.5", "claude"],
+  puter: ["default"],
+  pollinations: ["Pollinations", "midijourney", "openai-audio"],
+};
+
 const AIGeneratorModal: React.FC<{
   onClose: () => void;
   onGenerate: (content: string, imageUrl?: string) => void;
 }> = ({ onClose, onGenerate }) => {
   const [provider, setProvider] = useState<AIProvider>("groq");
+  const [model, setModel] = useState("mixtral-8x7b-32768");
   const [prompt, setPrompt] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,6 +34,8 @@ const AIGeneratorModal: React.FC<{
       const key = JSON.parse(saved)[provider];
       if (key) setApiKey(key);
     }
+    // Reseta modelo pro padrão quando muda o provedor
+    setModel(AI_MODELS[provider][0]);
   }, [provider]);
 
   // Salva chave no localStorage
@@ -61,7 +74,7 @@ const AIGeneratorModal: React.FC<{
     try {
       const endpoint = mode === "text" ? "/api/ai/generate" : "/api/ai/image";
       const body = mode === "text" 
-        ? { prompt, provider, apiKey }
+        ? { prompt, provider, apiKey, model }
         : { prompt };
 
       const response = await fetch(endpoint, {
@@ -147,6 +160,30 @@ const AIGeneratorModal: React.FC<{
                 <option value="deapi">🌐 DeAPI (Grátis)</option>
                 <option value="puter">☁️ Puter</option>
               </select>
+            </div>
+          )}
+
+          {/* Modelo */}
+          {mode === "text" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Modelo</label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {AI_MODELS[provider].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {provider === "openrouter" && "🔄 'auto' seleciona automaticamente o melhor modelo"}
+                {provider === "groq" && "⚡ Mistral é o mais rápido"}
+                {provider === "google" && "🔍 gemini-search é otimizado para buscas"}
+                {provider === "ollama" && "💻 Certifique-se que o modelo está instalado"}
+              </p>
             </div>
           )}
 
