@@ -41,10 +41,33 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
 );
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'editor' | 'settings' | 'creator' | 'plans' | 'projects'>('landing');
+  // Recupera view salva ou usa 'landing' como padrão
+  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'editor' | 'settings' | 'creator' | 'plans' | 'projects'>(() => {
+    const saved = localStorage.getItem('umbra_current_view');
+    return (saved as any) || 'landing';
+  });
+  
+  // Salva view sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('umbra_current_view', view);
+  }, [view]);
+
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [projects, setProjects] = useState<Project[]>([]);
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProject, setCurrentProject] = useState<Project | null>(() => {
+    const saved = localStorage.getItem('umbra_current_project');
+    return saved ? JSON.parse(saved) : null;
+  });
+  
+  // Salva projeto atual sempre que mudar
+  useEffect(() => {
+    if (currentProject) {
+      localStorage.setItem('umbra_current_project', JSON.stringify(currentProject));
+    } else {
+      localStorage.removeItem('umbra_current_project');
+    }
+  }, [currentProject]);
+
   const [isCreating, setIsCreating] = useState(false);
   const [creationStep, setCreationStep] = useState<'mode' | 'form'>('mode');
   const [generationMode, setGenerationMode] = useState<'auto' | 'manual'>('auto');
